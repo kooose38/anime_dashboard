@@ -22,7 +22,7 @@ server = app.server
 
 config = {
     "YEAR": [2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021], 
-    "DEBUG": True, 
+    "DEBUG": False, 
     "ROOT_URL": "http://api.moemoe.tokyo/anime/v1/master/", 
     "year": 0, 
     "season": 0, 

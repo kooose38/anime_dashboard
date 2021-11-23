@@ -1,5 +1,5 @@
 data/vector/*
-# firebase/*
+firebase/*
 venv
 *.pyc
 .DS_Store

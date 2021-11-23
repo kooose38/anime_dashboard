@@ -23,25 +23,38 @@ from db import request_post_db
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions = True)
 server = app.server
 
-uid = str(uuid.uuid4())
-request_post_db(uid, "/", "")
-# 昨日以降の履歴を削除する
-today = str(datetime.datetime.today()).split()[0]
-for file in os.listdir("data/vector"):
-    if file.find(".csv") >= 0:
-        if today not in file.split(".")[0]:
-            os.remove(f"data/vector/{file}")
+def initalize_setup():
+    '''必要なデータ格納場所の作成と履歴の消去'''
+    os.makedirs("data/vector", exist_ok=True)
+    os.makedirs("data/raw", exist_ok=True)
 
-for file in os.listdir("data/raw"):
-    if file.find(".csv") >= 0:
-        if today not in file.split(".")[0]:
-            os.remove(f"data/raw/{file}")
+    uid = str(uuid.uuid4())
+    request_post_db(uid, "/", "")
+    # 昨日以降の履歴を削除する
+    today = str(datetime.datetime.today()).split()[0]
+    for file in os.listdir("data/vector"):
+        if file.find(".csv") >= 0:
+            if today not in file.split(".")[0]:
+                os.remove(f"data/vector/{file}")
+
+    for file in os.listdir("data/raw"):
+        if file.find(".csv") >= 0:
+            if today not in file.split(".")[0]:
+                os.remove(f"data/raw/{file}")
+    return uid, today
+
+uid, today = initalize_setup()
+
+def get_this_year():
+    this_year = str(datetime.datetime.now()).split("-")[0]
+    return int(this_year) + 1 
 
 config = {
-    "YEAR": [2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021], 
+    "YEAR": [year for year in range(2012, get_this_year(), 1)], 
     "DEBUG": False, 
     "ROOT_URL": "http://api.moemoe.tokyo/anime/v1/master/", 
-    "WEB_HOOK_URL": "https://hooks.slack.com/services/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",
+    "WEB_HOOK_URL": os.getenv("WEB_HOOK_URL"),
+    "recommend_threshold": 0.75, 
     "year": 0, 
     "season": 0, 
     "sex": None,
@@ -54,6 +67,7 @@ config = {
     }
 }
 
+# データをAPI通信する
 if config["DEBUG"]:
     df = pd.read_csv("./data/raw/sample.csv")
     config["data"] = df 
@@ -69,128 +83,99 @@ else:
         config["data"] = df 
     
 
-# 年別検索の入力
-year_input = dbc.Form([dbc.Label("年別", html_for="select-year", width=2),
-    dbc.Select(
-                    id="select-year", 
-    options=[
-        {"label": year, "value": year} for year in config["YEAR"]
-    ]
-)])#end formgroup
+def build_index_page():
+    # 最初のページのビュー
+    return html.Div([
+        create_navbar(),
+        dbc.Carousel(
+        items=[
+            {
+                "key": "1",
+                "src": "static/images/sample001.jpg",
+                "header": "Query",
+                "caption": "",
+            },
+            {
+                "key": "2",
+                "src": "static/images/sample002.jpg",
+                "header": "Search",
+                "caption": "",
+            },
+            {
+                "key": "3",
+                "src": "static/images/sample003.jpg",
+                "header": "Request Keyword match System",
+                "caption": "This slide has a caption only",
+            },
+            {
+                "key": "4",
+                "src": "static/images/sample004.jpg",
+                "header": "Recommend System",
+                "caption": "This slide has a caption only",
+            },
 
-season_input = dbc.Form([dbc.Label("季節", html_for="select_season", width=2), 
-                              dbc.Select(
-                    id="select-season", 
-    options=[
-        {"label": "冬", "value": 1},
-        {"label": "春", "value": 2},
-        {"label": "夏", "value": 3},
-        {"label": "秋", "value": 4},
-    ]
-)])#end formgroup
+        ],
+        controls=False,
+        indicators=False,
+        interval=2000,
+        ride="carousel"), 
+        dbc.Container([
+            html.Div([
+                html.Hr(style={"width": "20%", "margin": "auto"}),
+                html.H2("分析", className="mt-3"),  
 
-# 人気検索の入力
-radioitems = dbc.Form(
-    [
-        dbc.Label("性別"),
-        dbc.RadioItems(
-            options=[
-                {"label": "男性", "value": 0},
-                {"label": "女性", "value": 1},
-                {"label": "全て", "value": 2},
-            ],
-            value=2,
-            id="radioitems-input",
-        ),
-    ]
-)
-
-# キーワード検索の入力
-kwd_input = dbc.Form([dbc.Label("キーワード", html_for="input-kwd", width=2)
-                    , dbc.Input(type="text"
-                                        , id="input-kwd"
-                                        , placeholder="ワンピース") #end input
-                        ])#end formgroup
-
-
-kwd_input_ = dbc.Form([dbc.Label("キーワード", html_for="input-kwd_", width=2)
-                    , dbc.Input(type="text"
-                                        , id="input-kwd_"
-                                        , placeholder="ワンピース") #end input
-                        ])#end formgroup
-
-# 最初のページのビュー
-index_page = html.Div([
-    create_navbar(),
-    dbc.Carousel(
-    items=[
-        {
-            "key": "1",
-            "src": "static/images/sample001.jpg",
-            "header": "With header ",
-            "caption": "and caption",
-        },
-        {
-            "key": "2",
-            "src": "static/images/sample002.jpg",
-            "header": "With header only",
-            "caption": "",
-        },
-        {
-            "key": "3",
-            "src": "static/images/sample003.jpg",
-            "header": "",
-            "caption": "This slide has a caption only",
-        },
-        {
-            "key": "4",
-            "src": "static/images/sample004.jpg",
-            "header": "",
-            "caption": "This slide has a caption only",
-        },
-
-    ],
-    controls=False,
-    indicators=False,
-    interval=2000,
-    ride="carousel"), 
-    dbc.Container([
-        html.Div([
-            html.Hr(style={"width": "20%", "margin": "auto"}),
-            html.H2("分析", className="mt-3"),  
-
-        ], style={"text-align": "center"}, className="mb-6"),
-        html.Div([
-            # html.Div([
+            ], style={"text-align": "center"}, className="mb-6"),
+            html.Div([
+                # html.Div([
+                    create_card(
+                        "放送日から検索", 
+                        "年と季節から該当するアニメ放送日のデータを取得します。", 
+                        "001"), 
+                    create_card(
+                        "人気のアニメ検索", 
+                        "性別から過去から最も人気の高いアニメをピックアップします。", 
+                        "002"),    
+                # ])
+            
+            ], style={"display": "flex", "margin": "auto"}), 
+            html.Div([
+                # html.Div([
                 create_card(
-                    "放送日から検索", 
-                    "年と季節から該当するアニメ放送日のデータを取得します。", 
-                    "001"), 
+                    "キーワード検索", 
+                    "キーワードを入力してマッチしたアニメを取得します。", 
+                    "003"), 
                 create_card(
-                    "人気のアニメ検索", 
-                    "性別から過去から最も人気の高いアニメをピックアップします。", 
-                    "002"),    
+                    "アニメ推薦システム", 
+                    "キーワードから類似したアニメを推薦します。おススメが高い順で並び替えます。", 
+                    "004"),    
             # ])
-        
-        ], style={"display": "flex", "margin": "auto"}), 
-        html.Div([
-            # html.Div([
-            create_card(
-                "キーワード検索", 
-                "キーワードを入力してマッチしたアニメを取得します。", 
-                "003"), 
-            create_card(
-                "アニメ推薦システム", 
-                "キーワードから類似したアニメを推薦します。おススメが高い順で並び替えます。", 
-                "004"),    
-        # ])
-        
-        ], style={"display": "flex", "margin": "auto"})
-    ], style={"margin-top": "70px"})
-])
+            
+            ], style={"display": "flex", "margin": "auto"})
+        ], style={"margin-top": "70px"})
+    ])
 
-# 検索ページのビュー
 def build_sample001_page():
+    request_post_db(uid, "/sample001", "")
+    season_input = dbc.Form([dbc.Label("季節", html_for="select_season", width=2), 
+                                dbc.Select(
+                        id="select-season", 
+        options=[
+            {"label": "冬", "value": 1},
+            {"label": "春", "value": 2},
+            {"label": "夏", "value": 3},
+            {"label": "秋", "value": 4},
+        ]
+    )])#end formgroup
+
+    # 年別検索の入力
+    year_input = dbc.Form([dbc.Label("年別", html_for="select-year", width=2),
+        dbc.Select(
+                        id="select-year", 
+        options=[
+            {"label": year, "value": year} for year in config["YEAR"]
+        ]
+    )])#end formgroup
+    
     return html.Div([
         create_navbar(),
         dbc.Container([
@@ -210,6 +195,21 @@ def build_sample001_page():
     ])
 
 def build_sample002_page():
+    request_post_db(uid, "/sample002", "")
+    radioitems = dbc.Form(
+        [
+            dbc.Label("性別"),
+            dbc.RadioItems(
+                options=[
+                    {"label": "男性", "value": 0},
+                    {"label": "女性", "value": 1},
+                    {"label": "全て", "value": 2},
+                ],
+                value=2,
+                id="radioitems-input",
+            ),
+        ]
+    )
     return html.Div([
         create_navbar(),
         dbc.Container([
@@ -228,6 +228,12 @@ def build_sample002_page():
     ])
 
 def build_sample003_page():
+    request_post_db(uid, "/sample003", "")
+    kwd_input = dbc.Form([dbc.Label("キーワード", html_for="input-kwd", width=2)
+                        , dbc.Input(type="text"
+                                            , id="input-kwd"
+                                            , placeholder="ワンピース") #end input
+    ])#end formgroup
     return html.Div([
         create_navbar(),
         dbc.Container([
@@ -246,6 +252,12 @@ def build_sample003_page():
     ])
 
 def build_sample004_page():
+    request_post_db(uid, "/sample004", "")
+    kwd_input_ = dbc.Form([dbc.Label("キーワード", html_for="input-kwd_", width=2)
+                        , dbc.Input(type="text"
+                                            , id="input-kwd_"
+                                            , placeholder="ワンピース") #end input
+    ])#end formgroup
     return html.Div([
         create_navbar(),
         dbc.Container([
@@ -264,6 +276,7 @@ def build_sample004_page():
     ])
 
 def build_contact_page():
+    request_post_db(uid, "/contact", "")
     email_input = html.Div(
         [
             dbc.Label("Email"),
@@ -299,6 +312,31 @@ def build_contact_page():
             form,
             html.Div("", id="dummy-form1"),
             html.Div("", id="dummy-form1"),
+        ])
+    ])
+
+def build_source_page():
+    return html.Div([
+        create_navbar(), 
+        dbc.Container([
+            html.Hr(),
+            html.H1("開発コード"),
+            html.Hr(), 
+            html.A("GitHub", href="https://github.com/kooose38/anime_dashboard"), 
+        ])
+    ])
+
+def build_document_page():
+    return html.Div([
+        create_navbar(),
+        dbc.Container([
+            html.Hr(), 
+            html.H1("Shangrila Anime API"), 
+            html.Hr(),
+            html.P("「Shangrila Anime API」はシーズン毎にアニメの番組情報を返してくれるWebAPIです。現時点（2021年4月）では、2014年度以降のアニメ情報を取得することができて、認証不要で使用できるようになっています。データ形式はJSONです。"),
+            html.A("Qiita", href="https://qiita.com/AKB428/items/64938febfd4dcf6ea698#get-animev1mastercours"),
+            html.Br(),
+            html.A("GitHub", href="https://github.com/Project-ShangriLa/sora-playframework-scala")
         ])
     ])
 
@@ -408,9 +446,6 @@ def load_output_keyword(n):
     except Exception as e:
         return [dbc.Alert("存在しません", color="danger")]
     return [dbc.Alert("入力してください", color="primary")]
-
-   
-        
         
 @app.callback([Output("dummy3", "children")], 
              [Input("input-kwd_", "value")])
@@ -439,8 +474,6 @@ def load_output_recommendation(n):
     except Exception as e:
         return [dbc.Alert("存在しません", color="danger")]
     return [dbc.Alert("入力してください", color="primary")]
-
-
 
 
 def build_main_page():
@@ -501,7 +534,7 @@ def build_recommend_page():
     today = str(datetime.datetime.today()).split()[0] 
     if today+".csv" not in os.listdir("./data/vector"):
         v = get_vector(config["data"])
-        v["99999"] = v.index 
+        v["99999"] = v.index # anime_title
         v.to_csv(f"./data/vector/{today}.csv", index=False)
     else:
         v = pd.read_csv(f"./data/vector/{today}.csv")
@@ -509,7 +542,7 @@ def build_recommend_page():
     kwd_col = v.columns[v.columns.str.contains(str(kwd))][0]
     v = v[[kwd_col, "99999"]].sort_values(kwd_col, ascending=False).reset_index(drop=True)
     v.columns = ["recommend", "title"]
-    v = v[v.recommend >= 0.75]
+    v = v[v.recommend >= config["recommend_threshold"]]
     dfs = pd.merge(config["data"], v, how="right", left_on="title", right_on="title")
     config["select_data"] = dfs 
 
@@ -522,7 +555,7 @@ def build_recommend_page():
     ], style={"margin": "0px"})
     
 
-# Root path 
+# Router 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     html.Div(id='page-content')
@@ -553,7 +586,7 @@ def display_page(pathname):
     elif pathname.find("/contact") >= 0:
         return build_contact_page()
     else:
-        return index_page 
+        return build_index_page() 
 
 
 # コンタクトページのモーダル開閉

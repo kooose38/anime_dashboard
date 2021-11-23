@@ -23,7 +23,7 @@ def create_navbar():
                  dbc.DropdownMenu(
                     children=[
                         dbc.DropdownMenuItem("More", header=True),
-                        dbc.DropdownMenuItem("UI source code", href="/github"),
+                        dbc.DropdownMenuItem("view code", href="/github"),
                         dbc.DropdownMenuItem("about dataset", href="/document_dataset"),
                         dbc.DropdownMenuItem("contact", href="/contact"),
                     ],

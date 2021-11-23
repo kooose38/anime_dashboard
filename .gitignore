@@ -1,2 +1,6 @@
 data/vector/*
 # firebase/*
+venv
+*.pyc
+.DS_Store
+.env

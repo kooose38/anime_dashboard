@@ -2,9 +2,10 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore 
 import datetime 
+import os 
 
 # 環境変数を設定する
-cred = credentials.Certificate("firebase/anime-recommend-system-firebase-adminsdk-u3inb-367f34c91b.json")
+cred = credentials.Certificate(f"firebase/{os.environ['FIREBASE_KEY']}")
 firebase_admin.initialize_app(cred)
 
 db = firestore.client()

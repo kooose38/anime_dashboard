@@ -18,6 +18,7 @@ $ pip install -r requirements.txt
 `firebase/<your config>.json`を取得したのちに作成します。
 ### 3. slackのurl設定
 環境変数に`WEB_HOOK_URL`をキーにして設定します。  
+環境変数に`FIREBASE_KEY`としてパスを設定します。
 ### 4. コマンド実行  
   
 ```
